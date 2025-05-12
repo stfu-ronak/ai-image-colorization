@@ -1,3 +1,9 @@
+import asyncio
+import sys
+
+if sys.platform.startswith('win'):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+  
 import streamlit as st
 
 st.set_page_config(page_title="AI Colorizer", layout="centered")
