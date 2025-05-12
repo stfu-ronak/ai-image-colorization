@@ -4,6 +4,8 @@ import numpy as np
 from PIL import Image
 import torchvision.transforms as transforms
 import torch
+import os
+os.environ["STREAMLIT_WATCHER_IGNORE_FILES"] = "torch"
 
 st.title("📊 Visualization of Color Enhancement")
 
