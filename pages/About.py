@@ -22,5 +22,5 @@ To demonstrate how deep learning can be used for creative tasks like colorizatio
 
 ---
 
-© 2025 – Built by [Your Name]. For academic purposes only.
+© 2025 – Built by Ronak. For academic purposes only.
 """)
