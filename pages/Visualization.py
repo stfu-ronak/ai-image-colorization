@@ -1,3 +1,5 @@
+import os
+os.environ["STREAMLIT_WATCHER_IGNORE_FILES"] = "torch"
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
