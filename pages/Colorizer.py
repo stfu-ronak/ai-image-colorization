@@ -1,7 +1,8 @@
-import streamlit as st
-import torch
 import os
 os.environ["STREAMLIT_WATCHER_IGNORE_FILES"] = "torch"
+import streamlit as st
+import torch
+
 import torchvision.transforms as transforms
 from PIL import Image
 import torch.nn as nn
