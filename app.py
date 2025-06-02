@@ -134,11 +134,167 @@ if main_section == "🛠️ Tools":
 
     elif selected_tool == "Comparison Slider":
         st.subheader("Before/After Comparison")
-        # To Do: Add comparison slider for grayscale vs colorized
+        import streamlit as st
+from PIL import Image
+
+def custom_image_comparison(img1, img2, width=700):
+    # Convert images to base64 to embed directly in HTML (optional)
+    import base64
+    import io
+    
+    def img_to_base64(img):
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        return base64.b64encode(buffered.getvalue()).decode()
+
+    img1_b64 = img_to_base64(img1)
+    img2_b64 = img_to_base64(img2)
+    
+    slider_html = f"""
+    <style>
+    .container {{
+        position: relative;
+        width: {width}px;
+        max-width: 100%;
+    }}
+    .image-wrapper {{
+        position: relative;
+        width: 100%;
+        overflow: hidden;
+    }}
+    .image-wrapper img {{
+        display: block;
+        width: 100%;
+        height: auto;
+    }}
+    .img-overlay {{
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 50%;
+        overflow: hidden;
+    }}
+    .slider {{
+        position: absolute;
+        top: 0;
+        left: 50%;
+        width: 5px;
+        height: 100%;
+        background: #fff;
+        cursor: ew-resize;
+        z-index: 10;
+        transition: left 0.3s ease;
+        border-radius: 2px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }}
+    </style>
+    <div class="container" id="slider-container">
+      <div class="image-wrapper">
+        <img src="data:image/png;base64,{img1_b64}" alt="Image 1" />
+        <div class="img-overlay" id="img-overlay">
+          <img src="data:image/png;base64,{img2_b64}" alt="Image 2" />
+        </div>
+        <div class="slider" id="slider"></div>
+      </div>
+    </div>
+    <script>
+    const slider = document.getElementById('slider');
+    const imgOverlay = document.getElementById('img-overlay');
+    const container = document.getElementById('slider-container');
+    
+    function moveSlider(e) {{
+      let rect = container.getBoundingClientRect();
+      let posX = e.clientX - rect.left;
+      if(posX < 0) posX = 0;
+      if(posX > rect.width) posX = rect.width;
+      slider.style.left = posX + 'px';
+      imgOverlay.style.width = posX + 'px';
+    }}
+    
+    slider.onmousedown = function(e) {{
+      window.onmousemove = moveSlider;
+      window.onmouseup = function() {{
+        window.onmousemove = null;
+        window.onmouseup = null;
+      }}
+    }};
+    
+    // Touch support for mobiles
+    slider.ontouchstart = function(e) {{
+      window.ontouchmove = function(evt) {{
+        moveSlider(evt.touches[0]);
+      }};
+      window.ontouchend = function() {{
+        window.ontouchmove = null;
+        window.ontouchend = null;
+      }};
+    }};
+    </script>
+    """
+    st.components.v1.html(slider_html, height=400)
+
+# Usage inside your streamlit app:
+if "original_image" in st.session_state and "colorized_image" in st.session_state:
+    grayscale_preview = st.session_state["original_image"].convert("L").resize((256, 256))
+    colorized_image = st.session_state["colorized_image"].resize((256, 256))
+    custom_image_comparison(grayscale_preview, colorized_image, width=700)
+else:
+    st.warning("Upload and colorize an image first.")
+    
 
     elif selected_tool == "Batch Processing":
         st.subheader("Batch Colorization")
-        # To Do: Allow multiple images to be processed
+        import zipfile
+import tempfile
+import os
+
+if selected_tool == "Batch Processing":
+    st.subheader("Batch Colorization - Upload Multiple Images")
+
+    uploaded_files = st.file_uploader("Upload multiple images (JPG/PNG)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+
+    if uploaded_files:
+        st.write(f"Uploaded {len(uploaded_files)} images. Processing...")
+
+        colorized_images = []
+        for uploaded_file in uploaded_files:
+            img = Image.open(uploaded_file).convert("RGB")
+            st.image(img, width=100, caption=f"Original: {uploaded_file.name}")
+
+            # Preprocess and colorize
+            input_l = preprocess(img)
+            with torch.no_grad():
+                ab_output = model(input_l)
+            colorized_img = postprocess(ab_output, input_l)
+            colorized_images.append((uploaded_file.name, colorized_img))
+
+        st.write("---")
+        st.subheader("Colorized Images")
+
+        cols = st.columns(min(4, len(colorized_images)))
+        for idx, (name, cimg) in enumerate(colorized_images):
+            with cols[idx % 4]:
+                st.image(cimg, width=150, caption=f"Colorized: {name}")
+
+        # Create ZIP for download
+        with tempfile.TemporaryDirectory() as tmpdir:
+            zip_path = os.path.join(tmpdir, "colorized_batch.zip")
+            with zipfile.ZipFile(zip_path, "w") as zipf:
+                for name, cimg in colorized_images:
+                    img_byte_arr = io.BytesIO()
+                    cimg.save(img_byte_arr, format='PNG')
+                    zipf.writestr(f"colorized_{name}", img_byte_arr.getvalue())
+
+            with open(zip_path, "rb") as f:
+                st.download_button(
+                    label="📥 Download All Colorized Images (ZIP)",
+                    data=f,
+                    file_name="colorized_batch.zip",
+                    mime="application/zip"
+                )
+    else:
+        st.info("Please upload at least one image to start batch colorization.")
+
 
     elif selected_tool == "Image Enhancements":
         st.subheader("Enhance Your Colorized Images")
