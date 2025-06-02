@@ -5,6 +5,8 @@ import torchvision.transforms as T
 import os
 import io
 import numpy as np
+import zipfile
+import tempfile
 
 # ==== Page Setup ====
 st.set_page_config(page_title="AI Image Colorizer", layout="wide")
@@ -70,11 +72,122 @@ def postprocess(ab_output, original_l):
     rgb_image = (rgb_image * 255).astype(np.uint8)
     return Image.fromarray(rgb_image)
 
+def custom_image_comparison(img1, img2, width=700):
+    import base64
+    import io
+
+    def img_to_base64(img):
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        return base64.b64encode(buffered.getvalue()).decode()
+
+    img1_b64 = img_to_base64(img1)
+    img2_b64 = img_to_base64(img2)
+
+    slider_html = f"""
+    <style>
+    .container {{
+        position: relative;
+        width: {width}px;
+        max-width: 100%;
+    }}
+    .image-wrapper {{
+        position: relative;
+        width: 100%;
+        overflow: hidden;
+    }}
+    .image-wrapper img {{
+        display: block;
+        width: 100%;
+        height: auto;
+    }}
+    .img-overlay {{
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 50%;
+        overflow: hidden;
+    }}
+    .slider {{
+        position: absolute;
+        top: 0;
+        left: 50%;
+        width: 5px;
+        height: 100%;
+        background: #fff;
+        cursor: ew-resize;
+        z-index: 10;
+        transition: left 0.3s ease;
+        border-radius: 2px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }}
+    </style>
+    <div class="container" id="slider-container">
+      <div class="image-wrapper">
+        <img src="data:image/png;base64,{img1_b64}" alt="Image 1" />
+        <div class="img-overlay" id="img-overlay">
+          <img src="data:image/png;base64,{img2_b64}" alt="Image 2" />
+        </div>
+        <div class="slider" id="slider"></div>
+      </div>
+    </div>
+    <script>
+    const slider = document.getElementById('slider');
+    const imgOverlay = document.getElementById('img-overlay');
+    const container = document.getElementById('slider-container');
+
+    function moveSlider(e) {{
+      let rect = container.getBoundingClientRect();
+      let posX = e.clientX - rect.left;
+      if(posX < 0) posX = 0;
+      if(posX > rect.width) posX = rect.width;
+      slider.style.left = posX + 'px';
+      imgOverlay.style.width = posX + 'px';
+    }}
+
+    slider.onmousedown = function(e) {{
+      window.onmousemove = moveSlider;
+      window.onmouseup = function() {{
+        window.onmousemove = null;
+        window.onmouseup = null;
+      }}
+    }};
+
+    slider.ontouchstart = function(e) {{
+      window.ontouchmove = function(evt) {{
+        moveSlider(evt.touches[0]);
+      }};
+      window.ontouchend = function() {{
+        window.ontouchmove = null;
+        window.ontouchend = null;
+      }};
+    }};
+    </script>
+    """
+    st.components.v1.html(slider_html, height=400)
+
+
 # ==== Sidebar Main Sections ====
 main_section = st.sidebar.radio("Navigate", ["🏠 Home", "🛠️ Tools", "📊 Business", "⚙️ Settings"])
 
-# ==== Tools Submodule Buttons ====
-if main_section == "🛠️ Tools":
+if main_section == "🏠 Home":
+    st.subheader("Welcome to the AI Real Estate Colorizer")
+    st.markdown("Enhance your property visuals with cutting-edge AI-powered image colorization. Ideal for real estate showcases, catalogs, and virtual staging.")
+
+elif main_section == "📊 Business":
+    st.subheader("Why This App Works for Real Estate")
+    st.markdown("""
+    - Save time and cost on professional photography and staging.
+    - Bring old blueprints and grayscale photos to life with vivid colors.
+    - Impress potential buyers with colorized interior and exterior images.
+    - Generate ready-to-use property catalogs with enhanced visuals.
+    """)
+
+elif main_section == "⚙️ Settings":
+    st.subheader("System Info & Settings")
+    # To Do: Show CPU/GPU usage, processing time etc.
+
+elif main_section == "🛠️ Tools":
     st.subheader("Toolbox")
     selected_tool = st.radio("Choose a tool:", [
         "Upload & Preview",
@@ -123,9 +236,14 @@ if main_section == "🛠️ Tools":
             st.image(colorized, caption="Colorized Image", use_column_width=True)
             st.success("Colorization complete ✅")
 
+            # Fix download button: use BytesIO with PNG data
+            img_byte_arr = io.BytesIO()
+            colorized.save(img_byte_arr, format='PNG')
+            img_byte_arr = img_byte_arr.getvalue()
+
             st.download_button(
                 label="📥 Download Colorized Image",
-                data=io.BytesIO(colorized.convert("RGB").tobytes()),
+                data=img_byte_arr,
                 file_name="colorized.png",
                 mime="image/png"
             )
@@ -134,210 +252,92 @@ if main_section == "🛠️ Tools":
 
     elif selected_tool == "Comparison Slider":
         st.subheader("Before/After Comparison")
-        
-        def custom_image_comparison(img1, img2, width=700):
-            # Convert images to base64 to embed directly in HTML (optional)
-            import base64
-            import io
-            
-            def img_to_base64(img):
-                buffered = io.BytesIO()
-                img.save(buffered, format="PNG")
-                return base64.b64encode(buffered.getvalue()).decode()
-        
-            img1_b64 = img_to_base64(img1)
-            img2_b64 = img_to_base64(img2)
-            
-            slider_html = f"""
-            <style>
-            .container {{
-                position: relative;
-                width: {width}px;
-                max-width: 100%;
-            }}
-            .image-wrapper {{
-                position: relative;
-                width: 100%;
-                overflow: hidden;
-            }}
-            .image-wrapper img {{
-                display: block;
-                width: 100%;
-                height: auto;
-            }}
-            .img-overlay {{
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 50%;
-                overflow: hidden;
-            }}
-            .slider {{
-                position: absolute;
-                top: 0;
-                left: 50%;
-                width: 5px;
-                height: 100%;
-                background: #fff;
-                cursor: ew-resize;
-                z-index: 10;
-                transition: left 0.3s ease;
-                border-radius: 2px;
-                box-shadow: 0 0 10px rgba(0,0,0,0.3);
-            }}
-            </style>
-            <div class="container" id="slider-container">
-              <div class="image-wrapper">
-                <img src="data:image/png;base64,{img1_b64}" alt="Image 1" />
-                <div class="img-overlay" id="img-overlay">
-                  <img src="data:image/png;base64,{img2_b64}" alt="Image 2" />
-                </div>
-                <div class="slider" id="slider"></div>
-              </div>
-            </div>
-            <script>
-            const slider = document.getElementById('slider');
-            const imgOverlay = document.getElementById('img-overlay');
-            const container = document.getElementById('slider-container');
-            
-            function moveSlider(e) {{
-              let rect = container.getBoundingClientRect();
-              let posX = e.clientX - rect.left;
-              if(posX < 0) posX = 0;
-              if(posX > rect.width) posX = rect.width;
-              slider.style.left = posX + 'px';
-              imgOverlay.style.width = posX + 'px';
-            }}
-            
-            slider.onmousedown = function(e) {{
-              window.onmousemove = moveSlider;
-              window.onmouseup = function() {{
-                window.onmousemove = null;
-                window.onmouseup = null;
-              }}
-            }};
-            
-            // Touch support for mobiles
-            slider.ontouchstart = function(e) {{
-              window.ontouchmove = function(evt) {{
-                moveSlider(evt.touches[0]);
-              }};
-              window.ontouchend = function() {{
-                window.ontouchmove = null;
-                window.ontouchend = null;
-              }};
-            }};
-            </script>
-            """
-            st.components.v1.html(slider_html, height=400)
 
-# Usage inside your streamlit app:
-if "original_image" in st.session_state and "colorized_image" in st.session_state:
-    grayscale_preview = st.session_state["original_image"].convert("L").resize((256, 256))
-    colorized_image = st.session_state["colorized_image"].resize((256, 256))
-    custom_image_comparison(grayscale_preview, colorized_image, width=700)
-else:
-    st.warning("Upload and colorize an image first.")
-    
+        if "original_image" in st.session_state and "colorized_image" in st.session_state:
+            grayscale_preview = st.session_state["original_image"].convert("L").resize((256, 256))
+            colorized_image = st.session_state["colorized_image"].resize((256, 256))
+            custom_image_comparison(grayscale_preview, colorized_image, width=700)
+        else:
+            st.warning("Upload and colorize an image first.")
 
     elif selected_tool == "Batch Processing":
-        st.subheader("Batch Colorization")
-        import zipfile
-import tempfile
-import os
+        st.subheader("Batch Colorization - Upload Multiple Images")
 
-if selected_tool == "Batch Processing":
-    st.subheader("Batch Colorization - Upload Multiple Images")
+        uploaded_files = st.file_uploader("Upload multiple images (JPG/PNG)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
-    uploaded_files = st.file_uploader("Upload multiple images (JPG/PNG)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+        if uploaded_files:
+            st.write(f"Uploaded {len(uploaded_files)} images. Processing...")
 
-    if uploaded_files:
-        st.write(f"Uploaded {len(uploaded_files)} images. Processing...")
+            colorized_images = []
+            for uploaded_file in uploaded_files:
+                img = Image.open(uploaded_file).convert("RGB")
+                st.image(img, width=100, caption=f"Original: {uploaded_file.name}")
 
-        colorized_images = []
-        for uploaded_file in uploaded_files:
-            img = Image.open(uploaded_file).convert("RGB")
-            st.image(img, width=100, caption=f"Original: {uploaded_file.name}")
+                # Preprocess and colorize
+                input_l = preprocess(img)
+                with torch.no_grad():
+                    ab_output = model(input_l)
+                colorized = postprocess(ab_output, input_l)
 
-            # Preprocess and colorize
-            input_l = preprocess(img)
-            with torch.no_grad():
-                ab_output = model(input_l)
-            colorized_img = postprocess(ab_output, input_l)
-            colorized_images.append((uploaded_file.name, colorized_img))
+                st.image(colorized, width=100, caption=f"Colorized: {uploaded_file.name}")
+                colorized_images.append((uploaded_file.name, colorized))
 
-        st.write("---")
-        st.subheader("Colorized Images")
-
-        cols = st.columns(min(4, len(colorized_images)))
-        for idx, (name, cimg) in enumerate(colorized_images):
-            with cols[idx % 4]:
-                st.image(cimg, width=150, caption=f"Colorized: {name}")
-
-        # Create ZIP for download
-        with tempfile.TemporaryDirectory() as tmpdir:
-            zip_path = os.path.join(tmpdir, "colorized_batch.zip")
-            with zipfile.ZipFile(zip_path, "w") as zipf:
-                for name, cimg in colorized_images:
+            # Prepare zip for download
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zip_file:
+                for name, img in colorized_images:
                     img_byte_arr = io.BytesIO()
-                    cimg.save(img_byte_arr, format='PNG')
-                    zipf.writestr(f"colorized_{name}", img_byte_arr.getvalue())
-
-            with open(zip_path, "rb") as f:
-                st.download_button(
-                    label="📥 Download All Colorized Images (ZIP)",
-                    data=f,
-                    file_name="colorized_batch.zip",
-                    mime="application/zip"
-                )
-    else:
-        st.info("Please upload at least one image to start batch colorization.")
-
+                    img.save(img_byte_arr, format="PNG")
+                    zip_file.writestr(f"colorized_{name}.png", img_byte_arr.getvalue())
+            st.download_button(
+                label="📥 Download All Colorized Images (ZIP)",
+                data=zip_buffer.getvalue(),
+                file_name="colorized_images.zip",
+                mime="application/zip"
+            )
+        else:
+            st.info("Upload multiple images to batch colorize.")
 
     elif selected_tool == "Image Enhancements":
-        st.subheader("Enhance Your Colorized Images")
-        # To Do: Brightness, contrast, saturation controls
+        st.subheader("Color Enhancement Tools")
+        st.info("Coming Soon!")
 
     elif selected_tool == "Blueprint Colorization":
-        st.subheader("Blueprint Colorization")
-        # To Do: Color-coded zones (bedroom, kitchen etc.)
+        st.subheader("Blueprint Colorization Module")
+        st.info("Upload your blueprints to colorize architectural plans.")
+        st.info("Coming Soon!")
 
     elif selected_tool == "Interior Photo Colorization":
-        st.subheader("Interior Image Colorization")
-        # To Do: Specialized colorization for real estate photos
+        st.subheader("Interior Photo Colorization")
+        st.info("Enhance and colorize interior room photos.")
+        st.info("Coming Soon!")
 
     elif selected_tool == "Property Catalog Generator":
-        st.subheader("Generate Property Catalog (PDF)")
-        # To Do: Combine colorized images into a PDF
+        st.subheader("Generate Property Catalogs")
+        st.info("Create catalogs with colorized images and property info.")
+        st.info("Coming Soon!")
 
     elif selected_tool == "Live Demo (Webcam)":
-        st.subheader("Live Camera Colorization Demo")
-        # To Do: Webcam feed and live grayscale->color pipeline
+        st.subheader("Live Colorization Demo")
+        st.info("Colorize live webcam feed.")
+        st.info("Coming Soon!")
 
     elif selected_tool == "Model Selection":
-        st.subheader("Model Selection & Settings")
-        # To Do: Select between pretrained models or tweak settings
+        st.subheader("Choose Colorization Model")
+        st.info("Switch between different AI models.")
+        st.info("Coming Soon!")
 
     elif selected_tool == "Image Format Converter":
-        st.subheader("Convert Image Formats")
-        # To Do: PNG <-> JPEG etc.
+        st.subheader("Image Format Conversion")
+        st.info("Convert images between formats (JPEG, PNG, BMP).")
+        st.info("Coming Soon!")
 
     elif selected_tool == "Colorization History":
-        st.subheader("History & Session")
-        # To Do: Store previous colorizations
+        st.subheader("Colorization History & Session Storage")
+        st.info("View and manage your past colorized images.")
+        st.info("Coming Soon!")
 
     elif selected_tool == "Interactive Gallery":
-        st.subheader("Gallery View")
-        # To Do: Preview all uploaded/colorized images
-
-elif main_section == "🏠 Home":
-    st.subheader("Welcome to the AI Real Estate Colorizer")
-    st.markdown("Enhance your property visuals with cutting-edge AI-powered image colorization. Ideal for real estate showcases, catalogs, and virtual staging.")
-
-elif main_section == "📊 Business":
-    st.subheader("Why This App Works for Real Estate")
-    # To Do: Add business use case pitch and visuals
-
-elif main_section == "⚙️ Settings":
-    st.subheader("System Info & Settings")
-    # To Do: Show CPU/GPU usage, processing time etc.
+        st.subheader("Gallery of Colorized Real Estate Images")
+        st.info("Explore example images and user uploads.")
+        st.info("Coming Soon!")
