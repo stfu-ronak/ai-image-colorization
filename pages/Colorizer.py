@@ -67,8 +67,8 @@ if uploaded_file:
         result = exaggerate_colors(output_tensor)
 
         col1, col2 = st.columns(2)
-        col1.image(image, caption="Grayscale", use_column_width=True)
-        col2.image(result, caption="Colorized", use_column_width=True)
+        col1.image(image, caption="Grayscale", use_container_width=True)
+        col2.image(result, caption="Colorized", use_container_width=True)
 
         buf = io.BytesIO()
         result.save(buf, format="PNG")
