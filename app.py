@@ -145,15 +145,8 @@ elif main_section == "🛠️ Tools":
         "Colorization Tool",
         "Comparison Slider",
         "Batch Processing",
-        "Image Enhancements",
         "Blueprint Colorization",
-        "Interior Photo Colorization",
         "Property Catalog Generator",
-        "Live Demo (Webcam)",
-        "Model Selection",
-        "Image Format Converter",
-        "Colorization History",
-        "Interactive Gallery"
     ], horizontal=True)
 
     if selected_tool == "Colorization Tool":
@@ -202,6 +195,83 @@ elif main_section == "🛠️ Tools":
             st.download_button("📥 Download All (ZIP)", data=zip_buffer.getvalue(), file_name="colorized_images.zip", mime="application/zip")
         else:
             st.info("Upload images to colorize.")
+            
+    elif selected_tool == "Blueprint Colorization":
+        st.subheader("Blueprint Image Colorization")
+        uploaded_blueprint = st.file_uploader("Upload a blueprint (JPG/PNG)", type=["jpg", "jpeg", "png"])
+    
+        if uploaded_blueprint:
+            image = Image.open(uploaded_blueprint).convert("RGB")
+    
+            # Show original
+            st.image(image, caption="Original Blueprint", use_column_width=True)
+    
+            # Preprocess and enhance contrast
+            blueprint_gray = image.convert("L").resize((256, 256))
+            blueprint_np = np.array(blueprint_gray)
+            enhanced = Image.fromarray(np.uint8(np.clip(1.5 * blueprint_np, 0, 255)))  # Contrast boost
+    
+            # Model expects normalized tensor input
+            input_tensor = preprocess(enhanced)
+    
+            with torch.no_grad():
+                ab_output = model(input_tensor)
+            colorized = postprocess(ab_output, input_tensor)
+    
+            st.image(colorized, caption="Colorized Blueprint", use_column_width=True)
+    
+            # Download button
+            img_byte_arr = io.BytesIO()
+            colorized.save(img_byte_arr, format='PNG')
+            st.download_button("📥 Download Colorized Blueprint", data=img_byte_arr.getvalue(), file_name="colorized_blueprint.png", mime="image/png")
+
+    elif selected_tool == "Property Catalog Generator":
+    st.subheader("🗂️ Generate a Property Catalog (PDF)")
+
+    uploaded_catalog_images = st.file_uploader(
+        "Upload property images (colorized, JPG/PNG)", type=["jpg", "jpeg", "png"], accept_multiple_files=True
+    )
+
+    title = st.text_input("Catalog Title", value="AI-Powered Property Catalog")
+    agent_name = st.text_input("Agent Name", value="John Doe")
+    contact_info = st.text_input("Contact Info", value="📞 123-456-7890 | ✉️ johndoe@example.com")
+
+    if uploaded_catalog_images:
+        from fpdf import FPDF
+
+        class CatalogPDF(FPDF):
+            def header(self):
+                self.set_font("Arial", "B", 16)
+                self.cell(0, 10, title, ln=1, align="C")
+
+            def footer(self):
+                self.set_y(-15)
+                self.set_font("Arial", "I", 10)
+                self.cell(0, 10, f"{agent_name} | {contact_info}", 0, 0, "C")
+
+        pdf = CatalogPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+
+        for img in uploaded_catalog_images:
+            image = Image.open(img).convert("RGB")
+            img_path = f"/tmp/{img.name}"
+            image.save(img_path)
+
+            pdf.add_page()
+            pdf.image(img_path, x=10, y=30, w=190)
+
+        pdf_output = io.BytesIO()
+        pdf.output(pdf_output)
+        st.success("📄 Property catalog generated!")
+
+        st.download_button(
+            label="📥 Download Catalog (PDF)",
+            data=pdf_output.getvalue(),
+            file_name="property_catalog.pdf",
+            mime="application/pdf"
+        )
+    else:
+        st.info("Upload images to create a catalog.")
 
     else:
         st.subheader(f"{selected_tool}")
