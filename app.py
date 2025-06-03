@@ -101,7 +101,7 @@ def custom_image_comparison(img1, img2, width=700):
     const slider = document.getElementById('slider');
     const imgOverlay = document.getElementById('img-overlay');
     const container = document.getElementById('slider-container');
-    function moveSlider(e) {
+    function moveSlider(e) 
       let rect = container.getBoundingClientRect();
       let posX = e.clientX - rect.left;
       posX = Math.max(0, Math.min(rect.width, posX));
