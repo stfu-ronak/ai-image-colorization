@@ -120,7 +120,7 @@ def custom_image_comparison(img1, img2, width=700):
     """
     st.components.v1.html(slider_html, height=400)
 
-# ==== Sidebar ==== 
+# ==== Sidebar Navigation ====
 main_section = st.sidebar.radio("Navigate", ["🏠 Home", "🛠️ Tools", "📊 Business", "⚙️ Settings"])
 
 if main_section == "🏠 Home":
