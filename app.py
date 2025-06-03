@@ -101,24 +101,23 @@ def custom_image_comparison(img1, img2, width=700):
     const slider = document.getElementById('slider');
     const imgOverlay = document.getElementById('img-overlay');
     const container = document.getElementById('slider-container');
-    function moveSlider(e) {
+    function moveSlider(e) {{
       let rect = container.getBoundingClientRect();
       let posX = e.clientX - rect.left;
       posX = Math.max(0, Math.min(rect.width, posX));
       slider.style.left = posX + 'px';
       imgOverlay.style.width = posX + 'px';
-    }
-    slider.onmousedown = function() {
+    }}
+    slider.onmousedown = function() {{
       window.onmousemove = moveSlider;
       window.onmouseup = () => window.onmousemove = null;
-    };
-    slider.ontouchstart = function(e) {
+    }};
+    slider.ontouchstart = function(e) {{
       window.ontouchmove = evt => moveSlider(evt.touches[0]);
       window.ontouchend = () => window.ontouchmove = null;
-    };
+    }};
     </script>
     """
-    st.components.v1.html(slider_html, height=400)
 
 # ==== Sidebar Navigation ====
 main_section = st.sidebar.radio("Navigate", ["🏠 Home", "🛠️ Tools", "📊 Business", "⚙️ Settings"])
